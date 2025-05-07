@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User model with role-based access
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  password       String
+  name           String
+  role           Role          @default(PATIENT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  // Relations
+  doctorProfile  Doctor?       // If the user is a doctor
+  patientProfile Patient?      // If the user is a patient
+  // Admin has no special profile, just the ADMIN role
+}
+
+// Doctor profile
+model Doctor {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialty    String
+  appointments Appointment[]
+}
+
+// Patient profile
+model Patient {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateOfBirth  DateTime?
+  appointments Appointment[]
+}
+
+// Appointment model
+model Appointment {
+  id          String   @id @default(uuid())
+  date        DateTime
+  time        String   // Store as HH:MM format
+  duration    Int      // Duration in minutes
+  status      Status   @default(SCHEDULED)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Relations
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  doctorId    String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+// Enums
+enum Role {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+enum Status {
+  PENDING    // Initial status when appointment is created
+  APPROVED   // Doctor has approved the appointment
+  REJECTED   // Doctor has rejected the appointment
+  SCHEDULED  // Appointment is confirmed and scheduled
+  COMPLETED  // Appointment has been completed
+  CANCELLED  // Appointment was cancelled
+  RESCHEDULED // Appointment was rescheduled
+}
